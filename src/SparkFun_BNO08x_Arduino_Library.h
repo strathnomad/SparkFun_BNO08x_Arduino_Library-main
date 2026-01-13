@@ -266,6 +266,7 @@ public:
 	bool tareNow(bool zAxis=false, sh2_TareBasis_t basis=SH2_TARE_BASIS_ROTATION_VECTOR);
 	bool saveTare();
 	bool clearTare();
+	bool setReorientation(float quatI, float quatJ, float quatK, float quatReal);
 	
 	uint8_t getTapDetector();
 	uint64_t getTimeStamp();

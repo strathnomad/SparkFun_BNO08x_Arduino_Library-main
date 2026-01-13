@@ -126,6 +126,9 @@ struct SensorData {
   float headingDegrees;
 } latestData;
 
+
+
+
 // Create custom TwoWire instance with specific pins (like the working Adafruit code)
 TwoWire myWire(PB3, PB10);  // SDA=PB3, SCL=PB10
 
@@ -255,7 +258,6 @@ void scanI2C(TwoWire &wirePort) {
 }
 
 void setup() {
-  // Initialize console Serial (optional)
   // if (enable_console) {
   // Serial.begin(115200);
   //   while(!Serial) delay(10); // Wait for Serial to become available.
@@ -289,7 +291,6 @@ void setup() {
   pinMode(ADG708_A2, OUTPUT);
   pinMode(ADG708_EN, OUTPUT);
   digitalWrite(ADG708_EN, HIGH); 
-
 
   if (enable_console) {
   Serial.println();
@@ -366,16 +367,31 @@ void setup() {
   setReports();
   delay(200); // Give sensor time to process report enable
 
+  // Set mounting orientation: X pointing up (vertical), Y right, Z forward/back
+  // This is a 90-degree rotation around Y axis to make X vertical instead of Z
+  // Quaternion for 90° rotation around Y: i=0, j=sin(45°)=0.707, k=0, real=cos(45°)=0.707
+  sh2_Quaternion_t orientation;
+  orientation.x = 0.0;
+  orientation.y = 0.7071067811865476;
+  orientation.z = 0.0;
+  orientation.w = 0.7071067811865476;
+  if (sh2_setReorientation(&orientation) == SH2_OK) {
+    Serial.println(F("Sensor reorientation set for wall mounting (X vertical)"));
+  } else {
+    Serial.println("Warning: Could not set sensor reorientation");
+  }
+  delay(100);
+
   // Initialize sensor data structure
   memset(&latestData, 0, sizeof(latestData));
 
   Serial.println("Reading events");
   delay(100);
 
-
-  if (myIMU.setCalibrationConfig(SH2_CAL_ACCEL || SH2_CAL_GYRO || SH2_CAL_MAG) == true) { // all three sensors
+// todo fucked
+  if (myIMU.setCalibrationConfig(SH2_CAL_ACCEL | SH2_CAL_GYRO | SH2_CAL_MAG) == true) { // all three sensors
   //if (myIMU.setCalibrationConfig(SH2_CAL_ACCEL || SH2_CAL_MAG) == true) { // Default settings
-  //if (myIMU.setCalibrationConfig(SH2_CAL_ACCEL) == true) { // only accel
+  // if (myIMU.setCalibrationConfig(SH2_CAL_MAG) == true) { // only accel
     Serial.println(F("Calibration Command Sent Successfully"));
   } else {
     Serial.println("Could not send Calibration Command. Freezing...");
@@ -383,6 +399,9 @@ void setup() {
   }
 
 
+
+
+  
 }
 
 // Here is where you define the sensor outputs you want to receive
@@ -396,22 +415,22 @@ void setReports(void) {
     retryCount++;
   }
   
-  // if (myIMU.enableRotationVector() == true) {
-  //   Serial.println(F("Rotation vector enabled"));
-  //   Serial.println(F("Output in form i, j, k, real, accuracy"));
-  //   delay(100); // Give sensor time to process
-  // } else {
-  //   Serial.println("Could not enable rotation vector");
-  //   Serial.println("Retrying in 200ms...");
-  //   delay(200);
-  //   // Retry once
-  //   if (myIMU.enableRotationVector() == true) {
-  //     Serial.println(F("Rotation vector enabled on retry"));
-  //     delay(100);
-  //   } else {
-  //     Serial.println("Failed to enable rotation vector after retry");
-  //   }
-  // }
+  if (myIMU.enableRotationVector() == true) {
+    Serial.println(F("Rotation vector enabled"));
+    Serial.println(F("Output in form i, j, k, real, accuracy"));
+    delay(100); // Give sensor time to process
+  } else {
+    Serial.println("Could not enable rotation vector");
+    Serial.println("Retrying in 200ms...");
+    delay(200);
+    // Retry once
+    if (myIMU.enableRotationVector() == true) {
+      Serial.println(F("Rotation vector enabled on retry"));
+      delay(100);
+    } else {
+      Serial.println("Failed to enable rotation vector after retry");
+    }
+  }
 
 
    if (myIMU.enableMagnetometer() == true) {
@@ -444,6 +463,9 @@ void setReports(void) {
   } else {
     Serial.println("Could not enable temperature");
   }
+
+
+
 
   // Enable geomagnetic rotation vector for heading (uses magnetometer data)
   if (myIMU.enableGeomagneticRotationVector() == true) {
@@ -485,35 +507,50 @@ void loop() {
   if (myIMU.getSensorEvent() == true) {
 
     // is it the correct sensor data we want?
-    if (myIMU.getSensorEventID() == SENSOR_REPORTID_ROTATION_VECTOR) {
+    // if (myIMU.getSensorEventID() == SENSOR_REPORTID_ROTATION_VECTOR) {
 
-      float quatI = myIMU.getQuatI();
-      float quatJ = myIMU.getQuatJ();
-      float quatK = myIMU.getQuatK();
-      float quatReal = myIMU.getQuatReal();
-      float quatRadianAccuracy = myIMU.getQuatRadianAccuracy();
+    //   float quatI = myIMU.getQuatI();
+    //   float quatJ = myIMU.getQuatJ();
+    //   float quatK = myIMU.getQuatK();
+    //   float quatReal = myIMU.getQuatReal();
+    //   float quatRadianAccuracy = myIMU.getQuatRadianAccuracy();
 
-      // Store latest data for formatted output and UART commands
-      latestData.hasRotationVector = true;
-      latestData.quatI = quatI;
-      latestData.quatJ = quatJ;
-      latestData.quatK = quatK;
-      latestData.quatReal = quatReal;
-      latestData.quatRadianAccuracy = quatRadianAccuracy;
+    //   // Store latest data for formatted output and UART commands
+    //   latestData.hasRotationVector = true;
+    //   latestData.quatI = quatI;
+    //   latestData.quatJ = quatJ;
+    //   latestData.quatK = quatK;
+    //   latestData.quatReal = quatReal;
+    //   latestData.quatRadianAccuracy = quatRadianAccuracy;
 
-      if (shouldPrint && !formatted_output) {
-      Serial.print(quatI, 2);
-      Serial.print(F(","));
-      Serial.print(quatJ, 2);
-      Serial.print(F(","));
-      Serial.print(quatK, 2);
-      Serial.print(F(","));
-      Serial.print(quatReal, 2);
-      Serial.print(F(","));
-      Serial.print(quatRadianAccuracy, 2);
-      Serial.println();
-      }
-    }
+    //   // Get yaw/heading in radians and convert to degrees
+    //   float headingDegrees = (myIMU.getYaw()) * 180.0 / PI;
+     
+    //   // Normalize heading to 0-360 degrees
+    //   if (headingDegrees < 0) {
+    //     headingDegrees += 360.0;
+    //   }
+
+    //   // Store latest data for formatted output and UART commands
+    //   latestData.hasHeading = true;
+    //   latestData.headingDegrees = headingDegrees;
+
+
+
+
+    //   if (shouldPrint && !formatted_output) {
+    //   Serial.print(quatI, 2);
+    //   Serial.print(F(","));
+    //   Serial.print(quatJ, 2);
+    //   Serial.print(F(","));
+    //   Serial.print(quatK, 2);
+    //   Serial.print(F(","));
+    //   Serial.print(quatReal, 2);
+    //   Serial.print(F(","));
+    //   Serial.print(quatRadianAccuracy, 2);
+    //   Serial.println();
+    //   }
+    // }
 
         // is it the correct sensor data we want?
     if (myIMU.getSensorEventID() == SENSOR_REPORTID_MAGNETIC_FIELD) {
@@ -529,6 +566,9 @@ void loop() {
       latestData.magY = y;
       latestData.magZ = z;
       latestData.magAccuracy = accuracy;
+
+      printAccuracyLevel(accuracy);
+
 
       if (shouldPrint && !formatted_output) {
       Serial.print(x, 2);
@@ -616,6 +656,9 @@ void loop() {
       }
     }
 
+
+
+
     // Calculate heading from geomagnetic rotation vector (uses magnetometer data)
     if (myIMU.getSensorEventID() == SENSOR_REPORTID_GEOMAGNETIC_ROTATION_VECTOR) {
 
@@ -634,12 +677,21 @@ void loop() {
       latestData.quatRadianAccuracy = myIMU.getQuatRadianAccuracy();
 
       // Get yaw/heading in radians and convert to degrees
+      // With reorientation set, getYaw() now correctly returns heading when rotating around the vertical axis
       float headingDegrees = (myIMU.getYaw()) * 180.0 / PI;
-     
+
       // Normalize heading to 0-360 degrees
       if (headingDegrees < 0) {
         headingDegrees += 360.0;
       }
+      
+      // Convert from counter-clockwise to clockwise (standard compass convention)
+      // 0° = North, 90° = East, 180° = South, 270° = West
+      headingDegrees = 360.0 - headingDegrees;
+      if (headingDegrees >= 360.0) {
+        headingDegrees = 0.0;
+      }
+      headingDegrees -= 90.0; // for aic i want the back of the device to face north for now
 
       // Store latest data for formatted output and UART commands
       latestData.hasHeading = true;
@@ -796,6 +848,8 @@ void printFormattedOutput()
     Serial.print(latestData.magY, 2);
     Serial.print(F(","));
     Serial.print(latestData.magZ, 2);
+    Serial.print(F(","));
+    Serial.print(latestData.magAccuracy, 2);
     Serial.print(F("]uT "));
   }
   
