@@ -567,7 +567,7 @@ void loop() {
       latestData.magZ = z;
       latestData.magAccuracy = accuracy;
 
-      printAccuracyLevel(accuracy);
+      // printAccuracyLevel(accuracy);
 
 
       if (shouldPrint && !formatted_output) {
